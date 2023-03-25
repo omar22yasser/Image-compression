@@ -1,0 +1,539 @@
+% read the image then read each component of rgb then convert it into
+% 8*8cells
+%at m=1
+I = imread('image1.bmp') ;
+r=I(:,:,1);
+g=I(:,:,2);
+b=I(:,:,3);
+imwrite(r,'redcomp.bmp');
+imwrite(g,'greencomp.bmp');
+imwrite(b,'bluecomp.bmp');
+I = rgb2gray(I) ;
+[p,o] = size(I) ;
+x = 136 ; y = 241 ; 
+v = p+(x-mod(p,x)) ;
+w = o+(y-mod(o,y)) ;
+I1 = uint8(zeros(v,w)) ;
+I1(1:p,1:o) = r ;
+I2 = uint8(zeros(v,w)) ;
+I2(1:p,1:o) = g ;
+I3 = uint8(zeros(v,w)) ;
+I3(1:p,1:o) = b ;
+e = v/x ; % rows in block
+t= w/y ; % columns in block 
+red = mat2cell(I1, repmat(e,[1 size(I1,1)/e]), repmat(t,[1 size(I1,2)/t]));
+green= mat2cell(I2, repmat(e,[1 size(I2,1)/e]), repmat(t,[1 size(I2,2)/t]));
+blue= mat2cell(I3, repmat(e,[1 size(I3,1)/e]), repmat(t,[1 size(I3,2)/t]));
+  reddct=cell(136,241) ;greendct=cell(136,241) ;bluedct=cell(136,241) ;
+   redcut=cell(136,241) ;greencut=cell(136,241) ;bluecut=cell(136,241) ;
+   redidct=cell(136,241) ;greenidct=cell(136,241) ;blueidct=cell(136,241) ;
+   redidct2=cell(136,241) ;greenidct2=cell(136,241) ;blueidct2=cell(136,241) ;
+ 
+for i=1:136
+    for j=1:241
+        reddct{i,j}=dct2(red{i,j});
+         greendct{i,j}=dct2(green{i,j});
+        bluedct{i,j}=dct2(blue{i,j});  
+        
+        redcut{i,j}=reddct{i,j}(1,1);
+        greencut{i,j}=greendct{i,j}(1,1);
+        bluecut{i,j}=bluedct{i,j}(1,1); 
+        
+         redidct2{i,j}=zeros(8);
+      greenidct2{i,j}=zeros(8);
+      blueidct2{i,j}=zeros(8);
+      
+      redidct2{i,j}(1,1)=redcut{i,j};
+       greenidct2{i,j}(1,1)=greencut{i,j};
+       blueidct2{i,j}(1,1)=bluecut{i,j};
+     
+        
+        redidct{i,j}=idct2(redidct2{i,j});
+        greenidct{i,j}=idct2(greenidct2{i,j});
+        blueidct{i,j}=idct2(blueidct2{i,j});
+ 
+     
+    end
+end
+ 
+ 
+ 
+ 
+redfinalmtx=cell2mat(redidct);
+greenfinalmtx=cell2mat(greenidct);
+bluefinalmtx=cell2mat(blueidct);
+ 
+ 
+redfinalmtx(1081:1088,:)=[];
+greenfinalmtx(1081:1088,:)=[];
+bluefinalmtx(1081:1088,:)=[];
+redfinalmtx(:,1921:1928)=[];
+greenfinalmtx(:,1921:1928)=[];
+bluefinalmtx(:,1921:1928)=[];
+ 
+redfinalmtx=rescale(redfinalmtx);
+greenfinalmtx=rescale(greenfinalmtx);
+bluefinalmtx=rescale(bluefinalmtx);
+imgnew=cat(3,redfinalmtx,greenfinalmtx,bluefinalmtx);
+ 
+redcut=cell2mat(redcut);
+greencut=cell2mat(greencut);
+bluecut=cell2mat(bluecut);
+redcut(136,:)=[];
+greencut(136,:)=[];
+bluecut(136,:)=[];
+redcut(:,241)=[];
+greencut(:,241)=[];
+bluecut(:,241)=[];
+redcut=rescale(redcut);
+greencut=rescale(greencut);
+bluecut=rescale(bluecut);
+imgnewcomp=cat(3,redcut,greencut,bluecut);
+ 
+imwrite(imgnewcomp,'compressed1.bmp');
+imwrite(imgnew,'new1.bmp');
+%To get psnr
+ img=imread('image1.bmp');
+ red=img(:,:,1);
+green=img(:,:,2);
+blue=img(:,:,3);
+red = im2double(red);
+green = im2double(green);
+blue = im2double(blue);
+ T = dctmtx(8);
+dct = @(block_struct) T * block_struct.data * T';
+ r_B = blockproc(red,[8 8],dct);
+ g_B = blockproc(green,[8 8],dct);
+ b_B = blockproc(blue,[8 8],dct);
+ mask = [1   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0];
+ r_B2 = blockproc(r_B,[8 8],@(block_struct) mask .* block_struct.data);
+ g_B2 = blockproc(g_B,[8 8],@(block_struct) mask .* block_struct.data);
+ b_B2 = blockproc(b_B,[8 8],@(block_struct) mask .* block_struct.data);
+ invdct = @(block_struct) T' * block_struct.data * T;
+r_I2 = blockproc(r_B2,[8 8],invdct);
+ g_I2 = blockproc(g_B2,[8 8],invdct);
+ b_I2 = blockproc(b_B2,[8 8],invdct);
+red=im2uint8(red);
+ r_I2=im2uint8(r_I2);
+ peaksnr1_red=psnr(r_I2,red,255);
+green=im2uint8(green);
+ g_I2=im2uint8(g_I2);
+ peaksnr1_green=psnr(g_I2,green,255);
+blue=im2uint8(blue);
+ b_I2=im2uint8(b_I2);
+ peaksnr1_blue=psnr(b_I2,blue,255);
+ img2=cat(3,r_I2,g_I2,b_I2);
+ peaksnr_all1=psnr(img2,img,255);
+ 
+%% at m=2
+I = imread('image1.bmp') ;
+r=I(:,:,1);
+g=I(:,:,2);
+b=I(:,:,3);
+imwrite(r,'redcomp.bmp');
+imwrite(g,'greencomp.bmp');
+imwrite(b,'bluecomp.bmp');
+I = rgb2gray(I) ;
+[p,o] = size(I) ;
+x = 136 ; y = 241 ; 
+v = p+(x-mod(p,x)) ;
+w = o+(y-mod(o,y)) ;
+I1 = uint8(zeros(v,w)) ;
+I1(1:p,1:o) = r ;
+I2 = uint8(zeros(v,w)) ;
+I2(1:p,1:o) = g ;
+I3 = uint8(zeros(v,w)) ;
+I3(1:p,1:o) = b ;
+e = v/x ; % rows in block
+t= w/y ; % columns in block 
+red = mat2cell(I1, repmat(e,[1 size(I1,1)/e]), repmat(t,[1 size(I1,2)/t]));
+green= mat2cell(I2, repmat(e,[1 size(I2,1)/e]), repmat(t,[1 size(I2,2)/t]));
+blue= mat2cell(I3, repmat(e,[1 size(I3,1)/e]), repmat(t,[1 size(I3,2)/t]));
+  reddct=cell(136,241) ;greendct=cell(136,241) ;bluedct=cell(136,241) ;
+   redcut=cell(136,241) ;greencut=cell(136,241) ;bluecut=cell(136,241) ;
+   redidct=cell(136,241) ;greenidct=cell(136,241) ;blueidct=cell(136,241) ;
+   redidct2=cell(136,241) ;greenidct2=cell(136,241) ;blueidct2=cell(136,241) ;
+ 
+for i=1:136
+    for j=1:241
+        reddct{i,j}=dct2(red{i,j});
+         greendct{i,j}=dct2(green{i,j});
+        bluedct{i,j}=dct2(blue{i,j});  
+        
+        redcut{i,j}=reddct{i,j}(1:2,1:2);
+        greencut{i,j}=greendct{i,j}(1:2,1:2);
+        bluecut{i,j}=bluedct{i,j}(1:2,1:2); 
+        
+         redidct2{i,j}=zeros(8);
+      greenidct2{i,j}=zeros(8);
+      blueidct2{i,j}=zeros(8);
+      
+      redidct2{i,j}(1:2,1:2)=redcut{i,j};
+       greenidct2{i,j}(1:2,1:2)=greencut{i,j};
+       blueidct2{i,j}(1:2,1:2)=bluecut{i,j};
+     
+        
+        redidct{i,j}=idct2(redidct2{i,j});
+        greenidct{i,j}=idct2(greenidct2{i,j});
+        blueidct{i,j}=idct2(blueidct2{i,j});
+ 
+     
+    end
+end
+ 
+ 
+ 
+ 
+redfinalmtx=cell2mat(redidct);
+greenfinalmtx=cell2mat(greenidct);
+bluefinalmtx=cell2mat(blueidct);
+ 
+ 
+redfinalmtx(1081:1088,:)=[];
+greenfinalmtx(1081:1088,:)=[];
+bluefinalmtx(1081:1088,:)=[];
+redfinalmtx(:,1921:1928)=[];
+greenfinalmtx(:,1921:1928)=[];
+bluefinalmtx(:,1921:1928)=[];
+ 
+redfinalmtx=rescale(redfinalmtx);
+greenfinalmtx=rescale(greenfinalmtx);
+bluefinalmtx=rescale(bluefinalmtx);
+imgnew=cat(3,redfinalmtx,greenfinalmtx,bluefinalmtx);
+redcut=cell2mat(redcut);
+greencut=cell2mat(greencut);
+bluecut=cell2mat(bluecut);
+redcut(136,:)=[];
+greencut(136,:)=[];
+bluecut(136,:)=[];
+redcut(:,241)=[];
+greencut(:,241)=[];
+bluecut(:,241)=[];
+redcut=rescale(redcut);
+greencut=rescale(greencut);
+bluecut=rescale(bluecut);
+imgnewcomp=cat(3,redcut,greencut,bluecut);
+imwrite(imgnewcomp,'compressed2.bmp');
+imwrite(imgnew,'new2.bmp');
+%To get psnr
+img=imread('image1.bmp');
+ red=img(:,:,1);
+green=img(:,:,2);
+blue=img(:,:,3);
+red = im2double(red);
+green = im2double(green);
+blue = im2double(blue);
+ T = dctmtx(8);
+dct = @(block_struct) T * block_struct.data * T';
+ r_B = blockproc(red,[8 8],dct);
+ g_B = blockproc(green,[8 8],dct);
+ b_B = blockproc(blue,[8 8],dct);
+ mask = [1   1   0   0   0   0   0   0
+           1   1   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0];
+ r_B2 = blockproc(r_B,[8 8],@(block_struct) mask .* block_struct.data);
+ g_B2 = blockproc(g_B,[8 8],@(block_struct) mask .* block_struct.data);
+ b_B2 = blockproc(b_B,[8 8],@(block_struct) mask .* block_struct.data);
+ invdct = @(block_struct) T' * block_struct.data * T;
+r_I2 = blockproc(r_B2,[8 8],invdct);
+ g_I2 = blockproc(g_B2,[8 8],invdct);
+ b_I2 = blockproc(b_B2,[8 8],invdct);
+ 
+red=im2uint8(red);
+ r_I2=im2uint8(r_I2);
+ peaksnr2_red=psnr(r_I2,red,255);
+green=im2uint8(green);
+ g_I2=im2uint8(g_I2);
+ peaksnr2_green=psnr(g_I2,green,255);
+blue=im2uint8(blue);
+ b_I2=im2uint8(b_I2);
+ peaksnr2_blue=psnr(b_I2,blue,255); 
+ img2=cat(3,r_I2,g_I2,b_I2);
+ peaksnr_all2=psnr(img2,img,255);
+ 
+ 
+%% at m=3
+I = imread('image1.bmp') ;
+r=I(:,:,1);
+g=I(:,:,2);
+b=I(:,:,3);
+imwrite(r,'redcomp.bmp');
+imwrite(g,'greencomp.bmp');
+imwrite(b,'bluecomp.bmp');
+I = rgb2gray(I) ;
+[p,o] = size(I) ;
+x = 136 ; y = 241 ; 
+v = p+(x-mod(p,x)) ;
+w = o+(y-mod(o,y)) ;
+I1 = uint8(zeros(v,w)) ;
+I1(1:p,1:o) = r ;
+I2 = uint8(zeros(v,w)) ;
+I2(1:p,1:o) = g ;
+I3 = uint8(zeros(v,w)) ;
+I3(1:p,1:o) = b ;
+e = v/x ; % rows in block
+t= w/y ; % columns in block 
+red = mat2cell(I1, repmat(e,[1 size(I1,1)/e]), repmat(t,[1 size(I1,2)/t]));
+green= mat2cell(I2, repmat(e,[1 size(I2,1)/e]), repmat(t,[1 size(I2,2)/t]));
+blue= mat2cell(I3, repmat(e,[1 size(I3,1)/e]), repmat(t,[1 size(I3,2)/t]));
+  reddct=cell(136,241) ;greendct=cell(136,241) ;bluedct=cell(136,241) ;
+   redcut=cell(136,241) ;greencut=cell(136,241) ;bluecut=cell(136,241) ;
+   redidct=cell(136,241) ;greenidct=cell(136,241) ;blueidct=cell(136,241) ;
+   redidct2=cell(136,241) ;greenidct2=cell(136,241) ;blueidct2=cell(136,241) ;
+   
+for i=1:136
+    for j=1:241
+        reddct{i,j}=dct2(red{i,j});
+         greendct{i,j}=dct2(green{i,j});
+        bluedct{i,j}=dct2(blue{i,j});  
+        
+        redcut{i,j}=reddct{i,j}(1:3,1:3);
+        greencut{i,j}=greendct{i,j}(1:3,1:3);
+        bluecut{i,j}=bluedct{i,j}(1:3,1:3); 
+        
+         redidct2{i,j}=zeros(8);
+      greenidct2{i,j}=zeros(8);
+      blueidct2{i,j}=zeros(8);
+      
+      redidct2{i,j}(1:3,1:3)=redcut{i,j};
+       greenidct2{i,j}(1:3,1:3)=greencut{i,j};
+       blueidct2{i,j}(1:3,1:3)=bluecut{i,j};
+     
+        
+        redidct{i,j}=idct2(redidct2{i,j});
+        greenidct{i,j}=idct2(greenidct2{i,j});
+        blueidct{i,j}=idct2(blueidct2{i,j});
+ 
+     
+    end
+end
+ 
+redfinalmtx=cell2mat(redidct);
+greenfinalmtx=cell2mat(greenidct);
+bluefinalmtx=cell2mat(blueidct);
+ 
+ 
+redfinalmtx(1081:1088,:)=[];
+greenfinalmtx(1081:1088,:)=[];
+bluefinalmtx(1081:1088,:)=[];
+redfinalmtx(:,1921:1928)=[];
+greenfinalmtx(:,1921:1928)=[];
+bluefinalmtx(:,1921:1928)=[];
+ 
+redfinalmtx=rescale(redfinalmtx);
+greenfinalmtx=rescale(greenfinalmtx);
+bluefinalmtx=rescale(bluefinalmtx);
+imgnew=cat(3,redfinalmtx,greenfinalmtx,bluefinalmtx);
+redcut=cell2mat(redcut);
+greencut=cell2mat(greencut);
+bluecut=cell2mat(bluecut);
+redcut(136,:)=[];
+greencut(136,:)=[];
+bluecut(136,:)=[];
+redcut(:,241)=[];
+greencut(:,241)=[];
+bluecut(:,241)=[];
+redcut=rescale(redcut);
+greencut=rescale(greencut);
+bluecut=rescale(bluecut);
+imgnewcomp=cat(3,redcut,greencut,bluecut);
+imwrite(imgnewcomp,'compressed3.bmp');
+imwrite(imgnew,'new3.bmp');
+%To get psnr
+img=imread('image1.bmp');
+ red=img(:,:,1);
+green=img(:,:,2);
+blue=img(:,:,3);
+red = im2double(red);
+green = im2double(green);
+blue = im2double(blue);
+ T = dctmtx(8);
+dct = @(block_struct) T * block_struct.data * T';
+ r_B = blockproc(red,[8 8],dct);
+ g_B = blockproc(green,[8 8],dct);
+ b_B = blockproc(blue,[8 8],dct);
+ mask = [1   1   1   0   0   0   0   0
+           1   1   1   0   0   0   0   0
+           1   1   1   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0];
+ r_B2 = blockproc(r_B,[8 8],@(block_struct) mask .* block_struct.data);
+ g_B2 = blockproc(g_B,[8 8],@(block_struct) mask .* block_struct.data);
+ b_B2 = blockproc(b_B,[8 8],@(block_struct) mask .* block_struct.data);
+ invdct = @(block_struct) T' * block_struct.data * T;
+r_I2 = blockproc(r_B2,[8 8],invdct);
+ g_I2 = blockproc(g_B2,[8 8],invdct);
+ b_I2 = blockproc(b_B2,[8 8],invdct);
+red=im2uint8(red);
+ r_I2=im2uint8(r_I2);
+ peaksnr3_red=psnr(r_I2,red,255);
+green=im2uint8(green);
+ g_I2=im2uint8(g_I2);
+ peaksnr3_green=psnr(g_I2,green,255);
+blue=im2uint8(blue);
+ b_I2=im2uint8(b_I2);
+ peaksnr3_blue=psnr(b_I2,blue,255);
+  img2=cat(3,r_I2,g_I2,b_I2);
+ peaksnr_all3=psnr(img2,img,255);
+ 
+ 
+%% at m=4
+I = imread('image1.bmp') ;
+r=I(:,:,1);
+g=I(:,:,2);
+b=I(:,:,3);
+imwrite(r,'redcomp.bmp');
+imwrite(g,'greencomp.bmp');
+imwrite(b,'bluecomp.bmp');
+I = rgb2gray(I) ;
+[p,o] = size(I) ;
+x = 136 ; y = 241 ; 
+v = p+(x-mod(p,x)) ;
+w = o+(y-mod(o,y)) ;
+I1 = uint8(zeros(v,w)) ;
+I1(1:p,1:o) = r ;
+I2 = uint8(zeros(v,w)) ;
+I2(1:p,1:o) = g ;
+I3 = uint8(zeros(v,w)) ;
+I3(1:p,1:o) = b ;
+e = v/x ; % rows in block
+t= w/y ; % columns in block 
+red = mat2cell(I1, repmat(e,[1 size(I1,1)/e]), repmat(t,[1 size(I1,2)/t]));
+green= mat2cell(I2, repmat(e,[1 size(I2,1)/e]), repmat(t,[1 size(I2,2)/t]));
+blue= mat2cell(I3, repmat(e,[1 size(I3,1)/e]), repmat(t,[1 size(I3,2)/t]));
+  reddct=cell(136,241) ;greendct=cell(136,241) ;bluedct=cell(136,241) ;
+   redcut=cell(136,241) ;greencut=cell(136,241) ;bluecut=cell(136,241) ;
+   redidct=cell(136,241) ;greenidct=cell(136,241) ;blueidct=cell(136,241) ;
+   redidct2=cell(136,241) ;greenidct2=cell(136,241) ;blueidct2=cell(136,241) ;
+   
+for i=1:136
+    for j=1:241
+        reddct{i,j}=dct2(red{i,j});
+         greendct{i,j}=dct2(green{i,j});
+        bluedct{i,j}=dct2(blue{i,j});  
+        
+        redcut{i,j}=reddct{i,j}(1:4,1:4);
+        greencut{i,j}=greendct{i,j}(1:4,1:4);
+        bluecut{i,j}=bluedct{i,j}(1:4,1:4); 
+        
+         redidct2{i,j}=zeros(8);
+      greenidct2{i,j}=zeros(8);
+      blueidct2{i,j}=zeros(8);
+      
+      redidct2{i,j}(1:4,1:4)=redcut{i,j};
+       greenidct2{i,j}(1:4,1:4)=greencut{i,j};
+       blueidct2{i,j}(1:4,1:4)=bluecut{i,j};
+     
+        
+        redidct{i,j}=idct2(redidct2{i,j});
+        greenidct{i,j}=idct2(greenidct2{i,j});
+        blueidct{i,j}=idct2(blueidct2{i,j});
+ 
+     
+    end
+end
+ 
+redfinalmtx=cell2mat(redidct);
+greenfinalmtx=cell2mat(greenidct);
+bluefinalmtx=cell2mat(blueidct);
+ 
+ 
+redfinalmtx(1081:1088,:)=[];
+greenfinalmtx(1081:1088,:)=[];
+bluefinalmtx(1081:1088,:)=[];
+redfinalmtx(:,1921:1928)=[];
+greenfinalmtx(:,1921:1928)=[];
+bluefinalmtx(:,1921:1928)=[];
+ 
+redfinalmtx=rescale(redfinalmtx);
+greenfinalmtx=rescale(greenfinalmtx);
+bluefinalmtx=rescale(bluefinalmtx);
+imgnew=cat(3,redfinalmtx,greenfinalmtx,bluefinalmtx);
+redcut=cell2mat(redcut);
+greencut=cell2mat(greencut);
+bluecut=cell2mat(bluecut);
+redcut(136,:)=[];
+greencut(136,:)=[];
+bluecut(136,:)=[];
+redcut(:,241)=[];
+greencut(:,241)=[];
+bluecut(:,241)=[];
+redcut=rescale(redcut);
+greencut=rescale(greencut);
+bluecut=rescale(bluecut);
+imgnewcomp=cat(3,redcut,greencut,bluecut);
+imwrite(imgnewcomp,'compressed4.bmp');
+imwrite(imgnew,'new4.bmp');
+%To get psnr
+img=imread('image1.bmp');
+ red=img(:,:,1);
+green=img(:,:,2);
+blue=img(:,:,3);
+red = im2double(red);
+green = im2double(green);
+blue = im2double(blue);
+ T = dctmtx(8);
+dct = @(block_struct) T * block_struct.data * T';
+ r_B = blockproc(red,[8 8],dct);
+ g_B = blockproc(green,[8 8],dct);
+ b_B = blockproc(blue,[8 8],dct);
+ mask = [1   1   1   1   0   0   0   0
+           1   1   1   1   0   0   0   0
+           1   1   1   1   0   0   0   0
+           1   1   1   1   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0
+           0   0   0   0   0   0   0   0];
+ r_B2 = blockproc(r_B,[8 8],@(block_struct) mask .* block_struct.data);
+ g_B2 = blockproc(g_B,[8 8],@(block_struct) mask .* block_struct.data);
+ b_B2 = blockproc(b_B,[8 8],@(block_struct) mask .* block_struct.data);
+ invdct = @(block_struct) T' * block_struct.data * T;
+r_I2 = blockproc(r_B2,[8 8],invdct);
+ g_I2 = blockproc(g_B2,[8 8],invdct);
+ b_I2 = blockproc(b_B2,[8 8],invdct);
+red=im2uint8(red);
+ r_I2=im2uint8(r_I2);
+ peaksnr4_red=psnr(r_I2,red,255);
+green=im2uint8(green);
+ g_I2=im2uint8(g_I2);
+ peaksnr4_green=psnr(g_I2,green,255);
+blue=im2uint8(blue);
+ b_I2=im2uint8(b_I2);
+ peaksnr4_blue=psnr(b_I2,blue,255);
+ img2=cat(3,r_I2,g_I2,b_I2);
+ peaksnr_all4=psnr(img2,img,255);
+ %% 
+ 
+ %ploting each psnr against m
+ 
+ 
+ y=0:7;
+ x1=[0 peaksnr1_red peaksnr2_red peaksnr3_red peaksnr4_red 0 0 0 ];
+ x2=[0 peaksnr1_green peaksnr2_green peaksnr3_green peaksnr4_green 0 0 0  ];
+ x3=[0 peaksnr1_blue peaksnr2_blue peaksnr3_blue peaksnr4_blue 0 0 0 ];
+ x4=[0 peaksnr_all1 peaksnr_all2 peaksnr_all3 peaksnr_all4 0 0 0 ];
+ figure
+ stem(y,x1)
+ figure
+ stem(y,x2)
+ figure
+ stem(y,x3)
+ figure
+ stem(y,x4)
+
